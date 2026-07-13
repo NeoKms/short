@@ -133,6 +133,21 @@ func TestCreateAcceptsLongURL(t *testing.T) {
 	}
 }
 
+func TestCreatePreservesURLFragment(t *testing.T) {
+	repository := &repositoryStub{values: make(map[string]Link)}
+	service := NewService(repository, &cacheStub{values: make(map[string]Link)}, time.Hour, 0)
+	service.newCode = func() (string, error) { return "Ab12Cd34", nil }
+	raw := "https://example.com/report#import=eyJtZXNzYWdlIjoi0YLQtdGB0YI%2BIn0="
+
+	created, err := service.Create(context.Background(), raw, nil)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if created.OriginalURL != raw {
+		t.Errorf("Create() URL = %q, want %q", created.OriginalURL, raw)
+	}
+}
+
 func TestCreateRejectsTooLongURL(t *testing.T) {
 	service := NewService(&repositoryStub{values: make(map[string]Link)}, &cacheStub{values: make(map[string]Link)}, time.Hour, 0)
 	raw := "https://example.com/?data=" + strings.Repeat("a", maxOriginalURLLength-len("https://example.com/?data=")+1)

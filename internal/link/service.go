@@ -129,7 +129,7 @@ func validateURL(raw string) (string, error) {
 	if length == 0 || length > maxOriginalURLLength {
 		return "", fmt.Errorf("%w: original_url length must be between 1 and %d characters", ErrInvalidURL, maxOriginalURLLength)
 	}
-	parsed, err := url.ParseRequestURI(raw)
+	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return "", fmt.Errorf("%w: original_url must be an absolute http or https URL", ErrInvalidURL)
 	}

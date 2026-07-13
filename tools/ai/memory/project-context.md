@@ -8,6 +8,8 @@
 - PostgreSQL через `pgx`; SQL-миграции встроены в бинарник и применяются при старте.
 - Redis через `go-redis`; кеш хранит соответствие короткого кода и ссылки.
 - Исходные URL поддерживаются длиной до 65535 символов; лимит JSON-запроса на создание ссылки — 128 KiB.
+- URL длиной до 2048 байт перенаправляются HTTP 302; для более длинных URL возвращается HTML-переход, чтобы не превышать лимиты nginx на размер заголовка `Location`.
+- URL fragments (`#...`) сохраняются без преобразования разделителя в `%23`.
 - Локальная инфраструктура: `docker-compose.yml`.
 - CI и tag-based deployment в GHCR: `.github/workflows`; Docker-образ публикуется для `linux/amd64`, `linux/arm64` и `linux/arm/v7`.
 - Production API обращается к отдельным контейнерам PostgreSQL и Redis через `host.docker.internal`; deploy добавляет это имя через `host-gateway` для Linux.

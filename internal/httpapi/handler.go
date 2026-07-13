@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/vladislav/short/internal/link"
 )
+
+const maxLocationHeaderURLLength = 2048
 
 type HealthChecker interface{ Ping(context.Context) error }
 
@@ -74,7 +77,24 @@ func (h *Handler) redirect(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "internal server error")
 		return
 	}
-	http.Redirect(w, r, resolved.OriginalURL, http.StatusFound)
+	redirect(w, r, resolved.OriginalURL)
+}
+
+func redirect(w http.ResponseWriter, r *http.Request, target string) {
+	if len(target) <= maxLocationHeaderURLLength {
+		http.Redirect(w, r, target, http.StatusFound)
+		return
+	}
+
+	encodedTarget, _ := json.Marshal(target)
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Redirecting</title></head>
+<body><p>Redirecting…</p><script>window.location.replace(%s);</script><noscript>JavaScript is required to open this link.</noscript></body>
+</html>`, encodedTarget)
 }
 
 func (h *Handler) live(w http.ResponseWriter, _ *http.Request) {
