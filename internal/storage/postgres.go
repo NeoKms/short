@@ -2,9 +2,10 @@ package storage
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -12,8 +13,8 @@ import (
 	"github.com/vladislav/short/internal/link"
 )
 
-//go:embed migrations/001_init.sql
-var initialMigration string
+//go:embed migrations/*.sql
+var migrations embed.FS
 
 type Postgres struct{ pool *pgxpool.Pool }
 
@@ -33,8 +34,21 @@ func (p *Postgres) Close()                         { p.pool.Close() }
 func (p *Postgres) Ping(ctx context.Context) error { return p.pool.Ping(ctx) }
 
 func (p *Postgres) Migrate(ctx context.Context) error {
-	if _, err := p.pool.Exec(ctx, initialMigration); err != nil {
-		return fmt.Errorf("apply migrations: %w", err)
+	entries, err := fs.ReadDir(migrations, "migrations")
+	if err != nil {
+		return fmt.Errorf("read migrations: %w", err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		migration, err := fs.ReadFile(migrations, "migrations/"+entry.Name())
+		if err != nil {
+			return fmt.Errorf("read migration %s: %w", entry.Name(), err)
+		}
+		if _, err = p.pool.Exec(ctx, string(migration)); err != nil {
+			return fmt.Errorf("apply migration %s: %w", entry.Name(), err)
+		}
 	}
 	return nil
 }

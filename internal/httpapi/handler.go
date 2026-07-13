@@ -43,7 +43,7 @@ type createResponse struct {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 128<<10))
 	decoder.DisallowUnknownFields()
 	var request createRequest
 	if err := decoder.Decode(&request); err != nil {

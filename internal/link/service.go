@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var (
@@ -16,6 +17,8 @@ var (
 	ErrInvalidURL    = errors.New("invalid URL")
 	ErrInvalidExpiry = errors.New("invalid expiry")
 )
+
+const maxOriginalURLLength = 65535
 
 type Repository interface {
 	Create(context.Context, Link) error
@@ -122,8 +125,9 @@ func (s *Service) ttl(value Link, now time.Time) time.Duration {
 }
 
 func validateURL(raw string) (string, error) {
-	if len(raw) == 0 || len(raw) > 4096 {
-		return "", fmt.Errorf("%w: original_url length must be between 1 and 4096 characters", ErrInvalidURL)
+	length := utf8.RuneCountInString(raw)
+	if length == 0 || length > maxOriginalURLLength {
+		return "", fmt.Errorf("%w: original_url length must be between 1 and %d characters", ErrInvalidURL, maxOriginalURLLength)
 	}
 	parsed, err := url.ParseRequestURI(raw)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {

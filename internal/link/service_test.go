@@ -3,6 +3,7 @@ package link
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -114,5 +115,30 @@ func TestCreateRejectsInvalidURL(t *testing.T) {
 		if _, err := service.Create(context.Background(), raw, nil); err == nil {
 			t.Errorf("Create(%q) expected error", raw)
 		}
+	}
+}
+
+func TestCreateAcceptsLongURL(t *testing.T) {
+	repository := &repositoryStub{values: make(map[string]Link)}
+	service := NewService(repository, &cacheStub{values: make(map[string]Link)}, time.Hour, 0)
+	service.newCode = func() (string, error) { return "Ab12Cd34", nil }
+	raw := "https://example.com/?data=" + strings.Repeat("a", maxOriginalURLLength-len("https://example.com/?data="))
+
+	created, err := service.Create(context.Background(), raw, nil)
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if created.OriginalURL != raw {
+		t.Errorf("Create() URL length = %d, want %d", len(created.OriginalURL), len(raw))
+	}
+}
+
+func TestCreateRejectsTooLongURL(t *testing.T) {
+	service := NewService(&repositoryStub{values: make(map[string]Link)}, &cacheStub{values: make(map[string]Link)}, time.Hour, 0)
+	raw := "https://example.com/?data=" + strings.Repeat("a", maxOriginalURLLength-len("https://example.com/?data=")+1)
+
+	_, err := service.Create(context.Background(), raw, nil)
+	if !errors.Is(err, ErrInvalidURL) {
+		t.Fatalf("Create() error = %v, want ErrInvalidURL", err)
 	}
 }
